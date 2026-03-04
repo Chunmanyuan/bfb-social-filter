@@ -1,0 +1,14 @@
+{
+  "keywords": "bfb",
+  "hours_back": 24,
+  "max_notes": 30,
+  "max_video_size_mb": 100,
+  "num_frames": 40,
+  "dedup_threshold": 5,
+  "ocr_device": "auto",
+  "ocr_workers": 1,
+  "headless": true,
+  "daily_enabled": true,
+  "daily_time": "06:00",
+  "last_daily_run_date": "2026-03-04"
+}

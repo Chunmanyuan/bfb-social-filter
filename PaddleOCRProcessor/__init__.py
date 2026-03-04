@@ -1,0 +1,1 @@
+# Paddle OCR module package

@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>展示检索一体面板</title>
+  <style>
+    :root {
+      --bg: #f3f6f7;
+      --surface: #ffffff;
+      --surface-2: #eef4f5;
+      --text: #102126;
+      --muted: #5b7279;
+      --accent: #007a78;
+      --accent-2: #00a39f;
+      --warn: #b55b1a;
+      --line: #d5e2e5;
+      --chip: #dff4f3;
+      --ok: #17803d;
+      --shadow: 0 10px 32px rgba(9, 34, 39, 0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 420px at 12% -10%, #d8efed 10%, transparent 50%),
+        radial-gradient(800px 380px at 95% -20%, #e7f1e7 10%, transparent 45%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .topbar {
+      padding: 20px 24px 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.02em;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .layout {
+      padding: 12px 24px 28px;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -8px 0 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .grid.two {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea { min-height: 64px; resize: vertical; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: var(--surface-2);
+      font-size: 13px;
+    }
+
+    .toggle-row input { width: auto; }
+
+    .btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn.secondary {
+      background: #e7f1f1;
+      color: #0a3f42;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .run-status {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: var(--surface-2);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .logs {
+      margin-top: 8px;
+      max-height: 120px;
+      overflow: auto;
+      border-top: 1px dashed var(--line);
+      padding-top: 8px;
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr) 120px;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: linear-gradient(160deg, #ffffff 20%, #f4f8f8 100%);
+    }
+
+    .stat .k {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .stat .v {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .result-info {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .item-top {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .badge {
+      background: #dff4f3;
+      color: #07514f;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+
+    .title2 {
+      font-weight: 800;
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .chip {
+      background: var(--chip);
+      color: #0a4f4c;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .chip.field {
+      background: #eef2ff;
+      color: #344b8f;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .item-details {
+      border-top: 1px solid var(--line);
+      background: #fafdfd;
+      padding: 12px;
+      display: none;
+    }
+
+    .item-details.open { display: block; }
+
+    .block {
+      margin-bottom: 10px;
+    }
+
+    .block h4 {
+      margin: 0 0 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .block .txt {
+      margin: 0;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 30px 12px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      background: #fcfefe;
+    }
+
+    .warn { color: var(--warn); }
+    .ok { color: var(--ok); }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .item-top { grid-template-columns: 1fr; }
+      .item-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="title">展示检索一体面板</h1>
+    <p class="subtitle">默认显示最新批次的初筛结果。输入关键词后，按平台规则实时筛选并展示命中字段与命中词。</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>区块 A · 运行参数</h2>
+      <p class="hint">用于每日运行参数设置，也可直接“单次现场试运行”。</p>
+
+      <div class="grid">
+        <div>
+          <label for="cfgKeywords">抓取关键词（逗号分隔）</label>
+          <textarea id="cfgKeywords" placeholder="例如：bfb, 大数据"></textarea>
+        </div>
+
+        <div class="grid two">
+          <div>
+            <label for="cfgHoursBack">时间窗口（小时）</label>
+            <input id="cfgHoursBack" type="number" min="1" />
+          </div>
+          <div>
+            <label for="cfgMaxNotes">抓取上限（每平台）</label>
+            <input id="cfgMaxNotes" type="number" min="1" />
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div>
+            <label for="cfgMaxVideo">视频大小上限（MB）</label>
+            <input id="cfgMaxVideo" type="number" min="1" />
+          </div>
+          <div>
+            <label for="cfgFrames">视频截图帧数</label>
+            <input id="cfgFrames" type="number" min="1" />
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div>
+            <label for="cfgThreshold">截图去重阈值</label>
+            <input id="cfgThreshold" type="number" min="0" />
+          </div>
+          <div>
+            <label for="cfgOcrWorkers">OCR workers</label>
+            <input id="cfgOcrWorkers" type="number" min="1" />
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div>
+            <label for="cfgOcrDevice">OCR 设备</label>
+            <select id="cfgOcrDevice">
+              <option value="auto">auto</option>
+              <option value="cpu">cpu</option>
+              <option value="gpu">gpu</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfgDailyTime">每日触发时间</label>
+            <input id="cfgDailyTime" type="time" />
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <span>每日自动运行</span>
+          <input id="cfgDailyEnabled" type="checkbox" />
+        </div>
+
+        <div class="toggle-row">
+          <span>爬虫 headless 模式</span>
+          <input id="cfgHeadless" type="checkbox" />
+        </div>
+
+        <div class="btns">
+          <button class="btn secondary" id="btnSave">保存参数</button>
+          <button class="btn primary" id="btnRunOnce">单次试运行</button>
+        </div>
+      </div>
+
+      <div class="run-status" id="runStatus">运行状态加载中...</div>
+    </section>
+
+    <section class="panel">
+      <h2>区块 B · 结果展示与筛选</h2>
+
+      <div class="toolbar">
+        <select id="taskSelect"></select>
+        <textarea id="filterKeywords" placeholder="输入筛选词（逗号或换行分隔）。为空时展示该 task 全部初筛通过内容。"></textarea>
+        <button class="btn primary" id="btnFilter">执行筛选</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="k">本次 Task 总抓取量</div>
+          <div class="v" id="statTotal">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">时间窗口初筛通过量</div>
+          <div class="v" id="statPassed">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">关键词命中量</div>
+          <div class="v" id="statMatched">0</div>
+        </div>
+      </div>
+
+      <div class="result-info" id="resultInfo"></div>
+      <div class="list" id="resultList"></div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      tasks: [],
+      selectedTaskId: null,
+      config: null,
+      runStatusTimer: null,
+    };
+
+    const els = {
+      cfgKeywords: document.getElementById('cfgKeywords'),
+      cfgHoursBack: document.getElementById('cfgHoursBack'),
+      cfgMaxNotes: document.getElementById('cfgMaxNotes'),
+      cfgMaxVideo: document.getElementById('cfgMaxVideo'),
+      cfgFrames: document.getElementById('cfgFrames'),
+      cfgThreshold: document.getElementById('cfgThreshold'),
+      cfgOcrWorkers: document.getElementById('cfgOcrWorkers'),
+      cfgOcrDevice: document.getElementById('cfgOcrDevice'),
+      cfgDailyTime: document.getElementById('cfgDailyTime'),
+      cfgDailyEnabled: document.getElementById('cfgDailyEnabled'),
+      cfgHeadless: document.getElementById('cfgHeadless'),
+      btnSave: document.getElementById('btnSave'),
+      btnRunOnce: document.getElementById('btnRunOnce'),
+      runStatus: document.getElementById('runStatus'),
+      taskSelect: document.getElementById('taskSelect'),
+      filterKeywords: document.getElementById('filterKeywords'),
+      btnFilter: document.getElementById('btnFilter'),
+      statTotal: document.getElementById('statTotal'),
+      statPassed: document.getElementById('statPassed'),
+      statMatched: document.getElementById('statMatched'),
+      resultInfo: document.getElementById('resultInfo'),
+      resultList: document.getElementById('resultList'),
+    };
+
+    async function api(path, options = {}) {
+      const resp = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${text}`);
+      }
+      return resp.json();
+    }
+
+    function setConfigForm(cfg) {
+      els.cfgKeywords.value = cfg.keywords || '';
+      els.cfgHoursBack.value = cfg.hours_back ?? 24;
+      els.cfgMaxNotes.value = cfg.max_notes ?? 30;
+      els.cfgMaxVideo.value = cfg.max_video_size_mb ?? 100;
+      els.cfgFrames.value = cfg.num_frames ?? 40;
+      els.cfgThreshold.value = cfg.dedup_threshold ?? 5;
+      els.cfgOcrWorkers.value = cfg.ocr_workers ?? 1;
+      els.cfgOcrDevice.value = cfg.ocr_device || 'auto';
+      els.cfgDailyTime.value = cfg.daily_time || '09:00';
+      els.cfgDailyEnabled.checked = !!cfg.daily_enabled;
+      els.cfgHeadless.checked = cfg.headless !== false;
+    }
+
+    function readConfigForm() {
+      return {
+        keywords: els.cfgKeywords.value.trim(),
+        hours_back: Number(els.cfgHoursBack.value || 24),
+        max_notes: Number(els.cfgMaxNotes.value || 30),
+        max_video_size_mb: Number(els.cfgMaxVideo.value || 100),
+        num_frames: Number(els.cfgFrames.value || 40),
+        dedup_threshold: Number(els.cfgThreshold.value || 5),
+        ocr_workers: Number(els.cfgOcrWorkers.value || 1),
+        ocr_device: els.cfgOcrDevice.value,
+        daily_time: els.cfgDailyTime.value || '09:00',
+        daily_enabled: !!els.cfgDailyEnabled.checked,
+        headless: !!els.cfgHeadless.checked,
+      };
+    }
+
+    function renderRunStatus(status) {
+      const lines = [];
+      lines.push(`状态: ${status.status}`);
+      lines.push(`最近触发: ${status.last_trigger || '-'}`);
+      lines.push(`最近任务ID: ${status.last_task_id || '-'}`);
+      lines.push(`开始时间: ${status.started_at || '-'}`);
+      lines.push(`结束时间: ${status.ended_at || '-'}`);
+      lines.push(`退出码: ${status.last_exit_code ?? '-'}`);
+
+      const logs = (status.logs || []).slice(-12).map(
+        (x) => `[${x.timestamp}] ${x.level.toUpperCase()} ${x.message}`
+      ).join('\n');
+
+      els.runStatus.innerHTML = `
+        <div>${lines.join('<br/>')}</div>
+        <div class="logs">${logs || '暂无日志'}</div>
+      `;
+    }
+
+    function renderTaskOptions(tasks, latestTaskId) {
+      state.tasks = tasks || [];
+      els.taskSelect.innerHTML = '';
+      if (!state.tasks.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '暂无 task';
+        els.taskSelect.appendChild(opt);
+        state.selectedTaskId = null;
+        return;
+      }
+
+      state.tasks.forEach((task) => {
+        const opt = document.createElement('option');
+        opt.value = task.task_id;
+        opt.textContent = task.label;
+        els.taskSelect.appendChild(opt);
+      });
+
+      state.selectedTaskId = latestTaskId || state.tasks[0].task_id;
+      els.taskSelect.value = state.selectedTaskId;
+    }
+
+    function escapeHtml(input) {
+      return String(input || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderItems(items, keywords) {
+      els.resultList.innerHTML = '';
+      if (!items || !items.length) {
+        els.resultList.innerHTML = '<div class="empty">当前条件下没有结果。</div>';
+        return;
+      }
+
+      items.forEach((item) => {
+        const node = document.createElement('article');
+        node.className = 'item';
+
+        const chipsKw = (item.matched_keywords || []).map(
+          (k) => `<span class="chip">${escapeHtml(k)}</span>`
+        ).join('');
+        const chipsBy = (item.matched_by || []).map(
+          (k) => `<span class="chip field">${escapeHtml(k)}</span>`
+        ).join('');
+
+        const ocrText = item.ocr_text_joined || '无 OCR 内容';
+        const desc = item.desc || '无内容';
+        const ipText = item.ip_location || '-';
+        const nickname = item.nickname || '-';
+
+        node.innerHTML = `
+          <div class="item-top">
+            <div><span class="badge">${escapeHtml(item.platform)}</span></div>
+            <div>
+              <h3 class="title2">${escapeHtml(item.title || '(无标题)')}</h3>
+              <div class="meta">
+                <span>发布时间: ${escapeHtml(item.publish_time_text || '-')}</span>
+                <span>作者: ${escapeHtml(nickname)}</span>
+                <span>IP: ${escapeHtml(ipText)}</span>
+              </div>
+              <div class="chips">
+                ${chipsKw || (keywords.length ? '<span class="chip">未命中</span>' : '<span class="chip">未输入筛选词</span>')}
+                ${chipsBy}
+              </div>
+            </div>
+            <div class="item-actions">
+              <a class="btn secondary" target="_blank" rel="noreferrer" href="${escapeHtml(item.content_url || '#')}">跳转原帖</a>
+              <button class="btn ghost btn-detail" type="button">查看详情</button>
+            </div>
+          </div>
+          <div class="item-details">
+            <div class="block">
+              <h4>内容/简介</h4>
+              <p class="txt">${escapeHtml(desc)}</p>
+            </div>
+            <div class="block">
+              <h4>OCR 实际内容</h4>
+              <p class="txt">${escapeHtml(ocrText)}</p>
+            </div>
+            <div class="block">
+              <h4>互动指标</h4>
+              <p class="txt">点赞 ${item.metrics?.liked_count ?? 0} · 评论 ${item.metrics?.comment_count ?? 0} · 分享 ${item.metrics?.share_count ?? 0} · 收藏 ${item.metrics?.collected_count ?? 0}</p>
+            </div>
+          </div>
+        `;
+
+        const detailBtn = node.querySelector('.btn-detail');
+        const detailBox = node.querySelector('.item-details');
+        detailBtn.addEventListener('click', () => {
+          detailBox.classList.toggle('open');
+          detailBtn.textContent = detailBox.classList.contains('open') ? '收起详情' : '查看详情';
+        });
+
+        els.resultList.appendChild(node);
+      });
+    }
+
+    async function loadTasks() {
+      const data = await api('/api/dashboard/tasks');
+      renderTaskOptions(data.tasks || [], data.latest_task_id);
+    }
+
+    async function loadResults() {
+      if (!state.selectedTaskId) {
+        els.resultInfo.textContent = '暂无 task 数据';
+        els.resultList.innerHTML = '<div class="empty">暂无可展示内容。</div>';
+        return;
+      }
+
+      const rawKeywords = els.filterKeywords.value.trim();
+      const params = new URLSearchParams({
+        task_id: state.selectedTaskId,
+        limit: '200',
+      });
+      if (rawKeywords) {
+        params.set('keywords', rawKeywords);
+      }
+
+      const data = await api(`/api/dashboard/results?${params.toString()}`);
+      const stats = data.stats || {};
+      const keywords = data.keywords || [];
+
+      els.statTotal.textContent = String(stats.total_crawled ?? 0);
+      els.statPassed.textContent = String(stats.initial_passed_count ?? 0);
+      els.statMatched.textContent = String(stats.matched_count ?? 0);
+
+      const desc = keywords.length
+        ? `当前筛选词 ${keywords.join('、')}，共命中 ${stats.matched_count || 0} 条，已展示 ${stats.returned_count || 0} 条。`
+        : `未输入筛选词，展示该 task 全部初筛通过内容，共 ${stats.initial_passed_count || 0} 条。`;
+      els.resultInfo.textContent = `Task: ${data.task_label || data.task_id || '-'} · ${desc}`;
+
+      renderItems(data.items || [], keywords);
+    }
+
+    async function loadConfigAndStatus() {
+      const data = await api('/api/dashboard/run-config');
+      state.config = data.config || {};
+      setConfigForm(state.config);
+      renderRunStatus(data.run_status || {});
+    }
+
+    async function saveConfig() {
+      const payload = readConfigForm();
+      await api('/api/dashboard/run-config', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      await loadConfigAndStatus();
+      alert('参数已保存');
+    }
+
+    async function runOnce() {
+      const payload = readConfigForm();
+      await api('/api/dashboard/run-once', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      await loadConfigAndStatus();
+      alert('已触发单次运行');
+    }
+
+    async function refreshRunStatusOnly() {
+      try {
+        const data = await api('/api/dashboard/run-status');
+        renderRunStatus(data || {});
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function bindEvents() {
+      els.btnSave.addEventListener('click', async () => {
+        try {
+          await saveConfig();
+        } catch (err) {
+          alert(`保存失败: ${err.message}`);
+        }
+      });
+
+      els.btnRunOnce.addEventListener('click', async () => {
+        try {
+          await runOnce();
+        } catch (err) {
+          alert(`触发失败: ${err.message}`);
+        }
+      });
+
+      els.taskSelect.addEventListener('change', async () => {
+        state.selectedTaskId = els.taskSelect.value;
+        try {
+          await loadResults();
+        } catch (err) {
+          alert(`加载结果失败: ${err.message}`);
+        }
+      });
+
+      els.btnFilter.addEventListener('click', async () => {
+        try {
+          await loadResults();
+        } catch (err) {
+          alert(`筛选失败: ${err.message}`);
+        }
+      });
+    }
+
+    async function boot() {
+      try {
+        bindEvents();
+        await loadConfigAndStatus();
+        await loadTasks();
+        await loadResults();
+        state.runStatusTimer = setInterval(refreshRunStatusOnly, 5000);
+      } catch (err) {
+        console.error(err);
+        els.resultList.innerHTML = `<div class="empty warn">初始化失败: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
