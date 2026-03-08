@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,35 +13,44 @@ def _split_csv_paths(raw_value: Optional[str]) -> List[str]:
     return [part.strip() for part in str(raw_value).split(",") if part.strip()]
 
 
-def _to_absolute_path(path_str: str) -> str:
+def _to_absolute_path(path_str: str, base_root: str, logger=None) -> str:
+    """
+    Resolve path by a fixed base root.
+    Absolute paths are intentionally rejected to avoid carrying machine-specific history.
+    """
     if os.path.isabs(path_str):
-        return os.path.normpath(path_str)
-    return os.path.normpath(os.path.join(MEDIA_CRAWLER_ROOT, path_str))
+        if logger:
+            logger.warning(f"Skip absolute path (not allowed): {path_str}")
+        return ""
+    return os.path.normpath(os.path.join(base_root, path_str))
 
 
 def collect_image_paths(item: Dict, logger=None) -> List[str]:
     """
     Collect image paths by platform rule:
-    - bilibili: only video_screenshots
-    - xhs: local_media_paths + video_screenshots (if present)
+    - bilibili: only video_screenshots (base: PROJECT_ROOT)
+    - xhs: local_media_paths (base: MEDIA_CRAWLER_ROOT) + video_screenshots (base: PROJECT_ROOT)
     """
     platform = (item.get("platform") or "").strip().lower()
-    raw_paths: List[str] = []
+    source_paths: List[Tuple[str, str]] = []
 
     if platform == "bilibili":
-        raw_paths.extend(_split_csv_paths(item.get("video_screenshots")))
+        source_paths.extend((p, PROJECT_ROOT) for p in _split_csv_paths(item.get("video_screenshots")))
     elif platform == "xhs":
-        raw_paths.extend(_split_csv_paths(item.get("local_media_paths")))
-        raw_paths.extend(_split_csv_paths(item.get("video_screenshots")))
+        source_paths.extend((p, MEDIA_CRAWLER_ROOT) for p in _split_csv_paths(item.get("local_media_paths")))
+        source_paths.extend((p, PROJECT_ROOT) for p in _split_csv_paths(item.get("video_screenshots")))
     else:
-        raw_paths.extend(_split_csv_paths(item.get("local_media_paths")))
-        raw_paths.extend(_split_csv_paths(item.get("video_screenshots")))
+        source_paths.extend((p, MEDIA_CRAWLER_ROOT) for p in _split_csv_paths(item.get("local_media_paths")))
+        source_paths.extend((p, PROJECT_ROOT) for p in _split_csv_paths(item.get("video_screenshots")))
 
     collected: List[str] = []
     seen = set()
 
-    for raw_path in raw_paths:
-        abs_path = _to_absolute_path(raw_path)
+    for raw_path, base_root in source_paths:
+        abs_path = _to_absolute_path(raw_path, base_root, logger=logger)
+        if not abs_path:
+            continue
+
         _, ext = os.path.splitext(abs_path.lower())
         if ext not in IMAGE_EXTENSIONS:
             if logger:
@@ -53,6 +62,7 @@ def collect_image_paths(item: Dict, logger=None) -> List[str]:
             continue
         if abs_path in seen:
             continue
+
         seen.add(abs_path)
         collected.append(abs_path)
 

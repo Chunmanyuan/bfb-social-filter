@@ -12,6 +12,7 @@ class PaddleOCREngine:
         device: str = "auto",
         lang: str = "ch",
         use_textline_orientation: bool = True,
+        enable_mkldnn: bool = False,
         logger=None,
     ) -> None:
         self.logger = logger
@@ -27,6 +28,7 @@ class PaddleOCREngine:
             lang=lang,
             use_textline_orientation=use_textline_orientation,
             device=self.device,
+            enable_mkldnn=enable_mkldnn,
         )
 
     def _resolve_device(self, requested: str) -> str:

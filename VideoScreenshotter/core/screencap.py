@@ -1,10 +1,12 @@
 import cv2
 import os
+import numpy as np
 import logging
 from typing import List
 from .image_algo import ahash, hamming_distance
 
 logger = logging.getLogger("VideoScreenshotter")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def extract_and_deduplicate_frames(
     video_path: str,
@@ -66,7 +68,10 @@ def extract_and_deduplicate_frames(
         # In debug mode, unconditionally save to '原始截图'
         if debug_mode:
             all_path = os.path.join(all_frames_dir, file_name)
-            cv2.imwrite(all_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            # Use imencode + tofile to support Unicode paths on Windows
+            is_success, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            if is_success:
+                buffer.tofile(all_path)
             
         # Calculate Hash
         current_hash = ahash(frame)
@@ -87,9 +92,13 @@ def extract_and_deduplicate_frames(
             else:
                 save_path = os.path.join(output_dir, file_name)
             
-            # Use OpenCV to save the image (jpeg quality 90)
-            cv2.imwrite(save_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
-            retained_paths.append(os.path.abspath(save_path))
+            # Use imencode + tofile to support Unicode paths on Windows
+            is_success, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            if is_success:
+                buffer.tofile(save_path)
+                retained_paths.append(os.path.relpath(save_path, PROJECT_ROOT))
+            else:
+                logger.error(f"Failed to encode frame {file_name}")
             
             # Update last hash only if we keep the frame
             last_hash = current_hash

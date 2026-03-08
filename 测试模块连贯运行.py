@@ -5,6 +5,12 @@ import sys
 import time
 from datetime import datetime
 
+# 强制标准输出使用 utf-8，避免 Windows 控制台无法打印 Emoji 而崩溃
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 
 def str_to_bool(value: str) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
@@ -20,6 +26,7 @@ def run_pipeline(
     ocr_device: str,
     ocr_workers: int,
     headless: bool,
+    enable_mkldnn: bool = False,
     task_id: str | None = None,
 ) -> str:
     project_root = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +88,13 @@ crawler_module.run(
         python_executable = os.path.join(project_root, "venv", "bin", "python")
 
     try:
-        subprocess.run([python_executable, "_temp_e2e_runner.py"], cwd=crawler_dir, check=True)
+        subprocess.run(
+            [python_executable, "_temp_e2e_runner.py"],
+            cwd=crawler_dir,
+            check=True,
+            encoding="utf-8",
+            errors="replace",
+        )
     except subprocess.CalledProcessError as e:
         print(f"\n❌ 爬虫模块运行发生错误, 流水线中断。错误码: {e.returncode}")
         if os.path.exists(crawler_runner_path):
@@ -105,22 +118,30 @@ crawler_module.run(
         ],
         cwd=screenshot_dir,
         check=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     print("\n>>> [4/4] 启动 OCR 模块提取小红书图片与视频截图文字...")
+    ocr_cmd = [
+        python_executable,
+        "ocr_module.py",
+        "--task_id",
+        run_task_id,
+        "--device",
+        ocr_device,
+        "--workers",
+        str(max(1, int(ocr_workers))),
+    ]
+    if enable_mkldnn:
+        ocr_cmd.append("--enable_mkldnn")
+
     subprocess.run(
-        [
-            python_executable,
-            "ocr_module.py",
-            "--task_id",
-            run_task_id,
-            "--device",
-            ocr_device,
-            "--workers",
-            str(max(1, int(ocr_workers))),
-        ],
+        ocr_cmd,
         cwd=ocr_dir,
         check=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     print("\n" + "=" * 60)
@@ -143,6 +164,11 @@ def main():
     parser.add_argument("--ocr-workers", type=int, default=1, help="OCR workers, default 1")
     parser.add_argument("--headless", type=str, default="true", help="Headless mode: true/false")
     parser.add_argument("--task-id", type=str, default=None, help="Optional fixed task_id")
+    parser.add_argument(
+        "--enable-mkldnn",
+        action="store_true",
+        help="启用 MKLDNN CPU 加速（在部分 Windows/新版 Paddle 上可能导致崩溃，默认关闭）",
+    )
     args = parser.parse_args()
 
     run_pipeline(
@@ -155,6 +181,7 @@ def main():
         ocr_device=args.ocr_device,
         ocr_workers=args.ocr_workers,
         headless=str_to_bool(args.headless),
+        enable_mkldnn=args.enable_mkldnn,
         task_id=args.task_id,
     )
 

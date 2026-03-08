@@ -1,0 +1,57 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+
+# Local lock / temp
+.dashboard_launcher.lock
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Packaged executables
+*.exe
+
+# Local logs
+*.log
+*.log.*
+PaddleOCRProcessor/logs/
+VideoScreenshotter/logs/
+
+# Local runtime data
+DashboardQuerying/data/
+MediaCrawler/data/
+VideoScreenshotter/data/
+
+# Local browser / crawler runtime files
+MediaCrawler/browser_data/
+MediaCrawler/cache/
+
+# OCR runtime cache
+PaddleOCRProcessor/.mplconfig/
+PaddleOCRProcessor/.mplconfig_workers/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment / local config
+.env
+.env.*
+
+# Launcher packaging cache
+Launcher/build/
+Launcher/dist/
+Launcher/__pycache__/
+
+# Misc generated files
+*.bak

@@ -61,7 +61,7 @@ _WORKER_ENGINE = None
 _WORKER_DEVICE = "cpu"
 
 
-def _worker_init(device: str, lang: str):
+def _worker_init(device: str, lang: str, enable_mkldnn: bool):
     """
     Initialize one OCR engine per worker process.
     """
@@ -72,7 +72,7 @@ def _worker_init(device: str, lang: str):
     os.environ["MPLCONFIGDIR"] = worker_cache_dir
     os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
-    _WORKER_ENGINE = PaddleOCREngine(device=device, lang=lang, logger=None)
+    _WORKER_ENGINE = PaddleOCREngine(device=device, lang=lang, enable_mkldnn=enable_mkldnn, logger=None)
     _WORKER_DEVICE = _WORKER_ENGINE.device
 
 
@@ -133,6 +133,7 @@ def run(
     force: bool = False,
     lang: str = "ch",
     workers: int = 1,
+    enable_mkldnn: bool = False,
 ) -> Dict:
     """
     OCR module entry point.
@@ -141,7 +142,7 @@ def run(
     task_filter.task_id = task_id if task_id else "GLOBAL_TASK"
 
     logger.info(
-        "Starting OCR Processor: task_id=%s, item_ids=%s, device=%s, dry_run=%s, force=%s, lang=%s, workers=%s",
+        "Starting OCR Processor: task_id=%s, item_ids=%s, device=%s, dry_run=%s, force=%s, lang=%s, workers=%s, enable_mkldnn=%s",
         task_id,
         item_ids,
         device,
@@ -149,6 +150,7 @@ def run(
         force,
         lang,
         workers,
+        enable_mkldnn,
     )
 
     pending = get_pending_items(task_id=task_id, item_ids=item_ids, force=force)
@@ -172,7 +174,7 @@ def run(
     effective_device = "cpu"
 
     if workers == 1:
-        engine = PaddleOCREngine(device=device, lang=lang, logger=logger)
+        engine = PaddleOCREngine(device=device, lang=lang, enable_mkldnn=enable_mkldnn, logger=logger)
         effective_device = engine.device
 
         for item in pending:
@@ -213,7 +215,7 @@ def run(
             max_workers=workers,
             mp_context=mp.get_context("spawn"),
             initializer=_worker_init,
-            initargs=(device, lang),
+            initargs=(device, lang, enable_mkldnn),
         ) as executor:
             futures = [executor.submit(_worker_process_item, item) for item in pending]
             for future in as_completed(futures):
@@ -282,6 +284,11 @@ if __name__ == "__main__":
         default=1,
         help="Experimental parallel worker count. Default 1 (parallel disabled).",
     )
+    parser.add_argument(
+        "--enable_mkldnn",
+        action="store_true",
+        help="Enable MKLDNN acceleration for CPU inference (may cause crashes on newer Paddle versions on Windows). Default is False.",
+    )
     args = parser.parse_args()
 
     parsed_item_ids = [x.strip() for x in args.item_ids.split(",")] if args.item_ids else None
@@ -293,4 +300,5 @@ if __name__ == "__main__":
         force=args.force,
         lang=args.lang,
         workers=args.workers,
+        enable_mkldnn=args.enable_mkldnn,
     )

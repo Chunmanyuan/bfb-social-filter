@@ -14,10 +14,10 @@ DB_PATH = os.path.join(PROJECT_ROOT, "MediaCrawler", "data", "media_items.db")
 
 logger = logging.getLogger("VideoScreenshotter.db")
 
-def get_pending_videos(task_id: str = None, item_ids: List[str] = None) -> List[Tuple[str, str, str]]:
+def get_pending_videos(task_id: str = None, item_ids: List[str] = None) -> List[Tuple[str, str, str, str]]:
     """
     Fetch videos that need screenshotting.
-    Returns: List of (platform, item_id, local_media_paths)
+    Returns: List of (platform, item_id, task_id, local_media_paths)
     """
     if not os.path.exists(DB_PATH):
         logger.error(f"Database not found at {DB_PATH}")
@@ -27,7 +27,7 @@ def get_pending_videos(task_id: str = None, item_ids: List[str] = None) -> List[
     cursor = conn.cursor()
     
     query = """
-        SELECT platform, item_id, local_media_paths 
+        SELECT platform, item_id, task_id, local_media_paths 
         FROM media_items 
         WHERE content_type = 'video' 
           AND initial_passed = 1 
@@ -55,7 +55,7 @@ def get_pending_videos(task_id: str = None, item_ids: List[str] = None) -> List[
     finally:
         conn.close()
 
-def save_video_screenshots(platform: str, item_id: str, screenshots_paths: List[str]) -> bool:
+def save_video_screenshots(platform: str, item_id: str, screenshots_paths: List[str], task_id: str = None) -> bool:
     """
     Update the video_screenshots column for a specific item.
     """
@@ -68,10 +68,17 @@ def save_video_screenshots(platform: str, item_id: str, screenshots_paths: List[
     paths_str = ",".join(screenshots_paths)
     
     try:
-        cursor.execute(
-            "UPDATE media_items SET video_screenshots = ? WHERE platform = ? AND item_id = ?",
-            (paths_str, platform, item_id)
-        )
+        if task_id:
+            cursor.execute(
+                "UPDATE media_items SET video_screenshots = ? WHERE platform = ? AND item_id = ? AND task_id = ?",
+                (paths_str, platform, item_id, task_id)
+            )
+        else:
+            # Backward compatibility for legacy callers that do not pass task_id.
+            cursor.execute(
+                "UPDATE media_items SET video_screenshots = ? WHERE platform = ? AND item_id = ?",
+                (paths_str, platform, item_id)
+            )
         conn.commit()
         return cursor.rowcount > 0
     except Exception as e:

@@ -1,5 +1,6 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -21,7 +22,9 @@
       --radius: 14px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -112,7 +115,10 @@
       color: var(--text);
     }
 
-    textarea { min-height: 64px; resize: vertical; }
+    textarea {
+      min-height: 64px;
+      resize: vertical;
+    }
 
     .toggle-row {
       display: flex;
@@ -125,7 +131,9 @@
       font-size: 13px;
     }
 
-    .toggle-row input { width: auto; }
+    .toggle-row input {
+      width: auto;
+    }
 
     .btns {
       display: flex;
@@ -139,6 +147,22 @@
       padding: 10px 12px;
       cursor: pointer;
       font-weight: 700;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    #btnSave,
+    #btnRunOnce,
+    #btnStop {
+      font-size: 13px;
+    }
+
+    #btnFilter {
+      font-size: 15px;
+    }
+
+    .item-actions .btn {
+      font-size: 12px;
     }
 
     .btn.primary {
@@ -157,6 +181,16 @@
       color: var(--text);
     }
 
+    .btn.danger {
+      background: #b74a3a;
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
     .run-status {
       margin-top: 10px;
       border: 1px solid var(--line);
@@ -170,7 +204,8 @@
 
     .logs {
       margin-top: 8px;
-      max-height: 120px;
+      max-height: 280px;
+      /* 拉高日志区域高度，方便用户一屏内看清更多运行情况 */
       overflow: auto;
       border-top: 1px dashed var(--line);
       padding-top: 8px;
@@ -198,7 +233,7 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 10px 12px;
-      background: linear-gradient(160deg, #ffffff 20%, #f4f8f8 100%);
+      background: #ffffff;
     }
 
     .stat .k {
@@ -298,7 +333,9 @@
       display: none;
     }
 
-    .item-details.open { display: block; }
+    .item-details.open {
+      display: block;
+    }
 
     .block {
       margin-bottom: 10px;
@@ -326,18 +363,38 @@
       background: #fcfefe;
     }
 
-    .warn { color: var(--warn); }
-    .ok { color: var(--ok); }
+    .warn {
+      color: var(--warn);
+    }
+
+    .ok {
+      color: var(--ok);
+    }
 
     @media (max-width: 1080px) {
-      .layout { grid-template-columns: 1fr; }
-      .toolbar { grid-template-columns: 1fr; }
-      .stats { grid-template-columns: 1fr; }
-      .item-top { grid-template-columns: 1fr; }
-      .item-actions { justify-content: flex-start; }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .item-top {
+        grid-template-columns: 1fr;
+      }
+
+      .item-actions {
+        justify-content: flex-start;
+      }
     }
   </style>
 </head>
+
 <body>
   <header class="topbar">
     <h1 class="title">展示检索一体面板</h1>
@@ -346,7 +403,7 @@
 
   <main class="layout">
     <section class="panel">
-      <h2>区块 A · 运行参数</h2>
+      <h2>运行参数</h2>
       <p class="hint">用于每日运行参数设置，也可直接“单次现场试运行”。</p>
 
       <div class="grid">
@@ -409,13 +466,14 @@
         </div>
 
         <div class="toggle-row">
-          <span>爬虫 headless 模式</span>
+          <span>频繁失败登录时开启此选项（会弹出 Chrome 窗口）</span>
           <input id="cfgHeadless" type="checkbox" />
         </div>
 
         <div class="btns">
           <button class="btn secondary" id="btnSave">保存参数</button>
           <button class="btn primary" id="btnRunOnce">单次试运行</button>
+          <button class="btn danger" id="btnStop" type="button" disabled>停止运行</button>
         </div>
       </div>
 
@@ -423,7 +481,7 @@
     </section>
 
     <section class="panel">
-      <h2>区块 B · 结果展示与筛选</h2>
+      <h2>结果展示与筛选</h2>
 
       <div class="toolbar">
         <select id="taskSelect"></select>
@@ -473,6 +531,7 @@
       cfgHeadless: document.getElementById('cfgHeadless'),
       btnSave: document.getElementById('btnSave'),
       btnRunOnce: document.getElementById('btnRunOnce'),
+      btnStop: document.getElementById('btnStop'),
       runStatus: document.getElementById('runStatus'),
       taskSelect: document.getElementById('taskSelect'),
       filterKeywords: document.getElementById('filterKeywords'),
@@ -507,7 +566,8 @@
       els.cfgOcrDevice.value = cfg.ocr_device || 'auto';
       els.cfgDailyTime.value = cfg.daily_time || '09:00';
       els.cfgDailyEnabled.checked = !!cfg.daily_enabled;
-      els.cfgHeadless.checked = cfg.headless !== false;
+      els.cfgHeadless.checked = cfg.headless === false;
+      state.enable_mkldnn = !!cfg.enable_mkldnn;
     }
 
     function readConfigForm() {
@@ -522,27 +582,59 @@
         ocr_device: els.cfgOcrDevice.value,
         daily_time: els.cfgDailyTime.value || '09:00',
         daily_enabled: !!els.cfgDailyEnabled.checked,
-        headless: !!els.cfgHeadless.checked,
+        headless: !els.cfgHeadless.checked,
+        enable_mkldnn: false,
       };
     }
 
-    function renderRunStatus(status) {
-      const lines = [];
-      lines.push(`状态: ${status.status}`);
-      lines.push(`最近触发: ${status.last_trigger || '-'}`);
-      lines.push(`最近任务ID: ${status.last_task_id || '-'}`);
-      lines.push(`开始时间: ${status.started_at || '-'}`);
-      lines.push(`结束时间: ${status.ended_at || '-'}`);
-      lines.push(`退出码: ${status.last_exit_code ?? '-'}`);
+    function isBusyStatus(status) {
+      return status === 'running' || status === 'stopping';
+    }
 
-      const logs = (status.logs || []).slice(-12).map(
-        (x) => `[${x.timestamp}] ${x.level.toUpperCase()} ${x.message}`
+    function syncRunButtons(status) {
+      const busy = isBusyStatus(status);
+      els.btnSave.disabled = busy;
+      els.btnRunOnce.disabled = busy;
+      els.btnStop.disabled = !busy || status === 'stopping';
+      els.btnRunOnce.textContent = busy ? '运行中...' : '单次试运行';
+      els.btnStop.textContent = status === 'stopping' ? '停止中...' : '停止运行';
+    }
+
+    function renderRunStatus(status) {
+      const safeStatus = status || {};
+      syncRunButtons(safeStatus.status || 'idle');
+
+      const lines = [];
+      lines.push(`状态: ${safeStatus.status || 'idle'}`);
+      lines.push(`最近触发: ${safeStatus.last_trigger || '-'}`);
+      lines.push(`最近任务ID: ${safeStatus.last_task_id || '-'}`);
+      lines.push(`开始时间: ${safeStatus.started_at || '-'}`);
+      lines.push(`结束时间: ${safeStatus.ended_at || '-'}`);
+      lines.push(`退出码: ${safeStatus.last_exit_code ?? '-'}`);
+
+      const logs = (safeStatus.logs || []).slice(-26).map(
+        (x) => `[${x.timestamp}] ${String(x.level || '').toUpperCase()} ${x.message}`
       ).join('\n');
+
+      const oldLogsEl = els.runStatus.querySelector('.logs');
+      const oldScrollTop = oldLogsEl ? oldLogsEl.scrollTop : 0;
+      const isAtBottom = oldLogsEl
+        ? (oldLogsEl.scrollHeight - oldLogsEl.scrollTop <= oldLogsEl.clientHeight + 5)
+        : true;
 
       els.runStatus.innerHTML = `
         <div>${lines.join('<br/>')}</div>
         <div class="logs">${logs || '暂无日志'}</div>
       `;
+
+      const newLogsEl = els.runStatus.querySelector('.logs');
+      if (newLogsEl) {
+        if (isAtBottom) {
+          newLogsEl.scrollTop = newLogsEl.scrollHeight;
+        } else {
+          newLogsEl.scrollTop = oldScrollTop;
+        }
+      }
     }
 
     function renderTaskOptions(tasks, latestTaskId) {
@@ -631,7 +723,7 @@
             </div>
             <div class="block">
               <h4>互动指标</h4>
-              <p class="txt">点赞 ${item.metrics?.liked_count ?? 0} · 评论 ${item.metrics?.comment_count ?? 0} · 分享 ${item.metrics?.share_count ?? 0} · 收藏 ${item.metrics?.collected_count ?? 0}</p>
+              <p class="txt">点赞 ${item.metrics?.liked_count ?? 0} / 评论 ${item.metrics?.comment_count ?? 0} / 分享 ${item.metrics?.share_count ?? 0} / 收藏 ${item.metrics?.collected_count ?? 0}</p>
             </div>
           </div>
         `;
@@ -679,7 +771,7 @@
       const desc = keywords.length
         ? `当前筛选词 ${keywords.join('、')}，共命中 ${stats.matched_count || 0} 条，已展示 ${stats.returned_count || 0} 条。`
         : `未输入筛选词，展示该 task 全部初筛通过内容，共 ${stats.initial_passed_count || 0} 条。`;
-      els.resultInfo.textContent = `Task: ${data.task_label || data.task_id || '-'} · ${desc}`;
+      els.resultInfo.textContent = `Task: ${data.task_label || data.task_id || '-'} / ${desc}`;
 
       renderItems(data.items || [], keywords);
     }
@@ -702,6 +794,7 @@
     }
 
     async function runOnce() {
+      syncRunButtons('running');
       const payload = readConfigForm();
       await api('/api/dashboard/run-once', {
         method: 'POST',
@@ -709,6 +802,15 @@
       });
       await loadConfigAndStatus();
       alert('已触发单次运行');
+    }
+
+    async function stopOnce() {
+      syncRunButtons('stopping');
+      const data = await api('/api/dashboard/run-stop', {
+        method: 'POST',
+      });
+      renderRunStatus(data.run_status || { status: 'stopping' });
+      alert(data.message || '已请求停止当前任务');
     }
 
     async function refreshRunStatusOnly() {
@@ -726,6 +828,7 @@
           await saveConfig();
         } catch (err) {
           alert(`保存失败: ${err.message}`);
+          await loadConfigAndStatus();
         }
       });
 
@@ -734,6 +837,16 @@
           await runOnce();
         } catch (err) {
           alert(`触发失败: ${err.message}`);
+          await loadConfigAndStatus();
+        }
+      });
+
+      els.btnStop.addEventListener('click', async () => {
+        try {
+          await stopOnce();
+        } catch (err) {
+          alert(`停止失败: ${err.message}`);
+          await loadConfigAndStatus();
         }
       });
 
@@ -757,6 +870,7 @@
 
     async function boot() {
       try {
+        syncRunButtons('idle');
         bindEvents();
         await loadConfigAndStatus();
         await loadTasks();
@@ -771,4 +885,8 @@
     boot();
   </script>
 </body>
+
 </html>
+
+
+

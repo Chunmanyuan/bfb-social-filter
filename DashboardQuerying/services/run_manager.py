@@ -38,6 +38,7 @@ class DashboardRunManager:
         self.last_trigger: Optional[str] = None
         self._read_task: Optional[asyncio.Task] = None
         self._scheduler_task: Optional[asyncio.Task] = None
+        self._stop_requested = False
         self._logs = []
 
         self.module_root = Path(__file__).resolve().parents[1]
@@ -54,6 +55,23 @@ class DashboardRunManager:
         )
         if len(self._logs) > 400:
             self._logs = self._logs[-400:]
+
+    @staticmethod
+    def _decode_output(raw: Any) -> str:
+        if raw is None:
+            return ""
+        if isinstance(raw, str):
+            return raw
+        if not isinstance(raw, (bytes, bytearray)):
+            return str(raw)
+
+        for encoding in ("utf-8", "gb18030"):
+            try:
+                return raw.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+
+        return raw.decode("utf-8", errors="replace")
 
     def get_logs(self, limit: int = 100):
         if limit <= 0:
@@ -127,6 +145,10 @@ class DashboardRunManager:
             "--headless",
             "true" if bool(cfg.get("headless", True)) else "false",
         ]
+
+        if bool(cfg.get("enable_mkldnn", False)):
+            cmd.append("--enable-mkldnn")
+
         return cmd
 
     async def start_once(self, overrides: Optional[Dict[str, Any]] = None, trigger: str = "manual") -> bool:
@@ -146,17 +168,17 @@ class DashboardRunManager:
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True,
-                    encoding="utf-8",
-                    bufsize=1,
+                    text=False,
+                    bufsize=0,
                     cwd=str(self.workspace_root),
-                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                    env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"},
                 )
                 self.status = "running"
                 self.started_at = datetime.now()
                 self.ended_at = None
                 self.last_exit_code = None
                 self.last_trigger = trigger
+                self._stop_requested = False
                 self._read_task = asyncio.create_task(self._read_output())
                 return True
             except Exception as exc:
@@ -165,16 +187,72 @@ class DashboardRunManager:
                 self._append_log("error", f"Failed to start pipeline: {exc}")
                 return False
 
+    async def stop_once(self) -> Dict[str, Any]:
+        async with self._lock:
+            if not self.process or self.process.poll() is not None:
+                return {"stopped": False, "message": "No pipeline run is currently in progress"}
+
+            process = self.process
+            self._stop_requested = True
+            self.status = "stopping"
+            self._append_log("warning", f"Manual stop requested for PID {process.pid}.")
+
+        loop = asyncio.get_running_loop()
+
+        def _wait_for_exit(timeout: float) -> bool:
+            try:
+                process.wait(timeout=timeout)
+                return True
+            except subprocess.TimeoutExpired:
+                return False
+
+        if sys.platform == "win32":
+            self._append_log("warning", "Stopping pipeline process tree with taskkill.")
+            await loop.run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                ),
+            )
+            await loop.run_in_executor(None, _wait_for_exit, 5.0)
+        else:
+            try:
+                process.terminate()
+                self._append_log("warning", "Terminate signal sent to pipeline process.")
+            except Exception as exc:
+                self._append_log("warning", f"Failed to terminate pipeline process gracefully: {exc}")
+
+            exited = await loop.run_in_executor(None, _wait_for_exit, 5.0)
+            if not exited:
+                self._append_log("warning", "Terminate timed out. Killing pipeline process.")
+                try:
+                    process.kill()
+                except Exception as exc:
+                    self._append_log("warning", f"Failed to kill pipeline process: {exc}")
+                await loop.run_in_executor(None, _wait_for_exit, 5.0)
+
+        if self._read_task and not self._read_task.done():
+            try:
+                await asyncio.wait_for(asyncio.shield(self._read_task), timeout=5.0)
+            except asyncio.TimeoutError:
+                self._append_log("warning", "Timed out while waiting for pipeline log reader to stop.")
+
+        return {"stopped": True, "message": "Pipeline stop requested"}
+
     async def _read_output(self):
         loop = asyncio.get_event_loop()
-        task_pattern = re.compile(r"Task ID:\s*([A-Za-z0-9\\-_]+)")
+        task_pattern = re.compile(r"Task ID:\s*([A-Za-z0-9\-_]+)")
 
         try:
             while self.process and self.process.poll() is None:
-                line = await loop.run_in_executor(None, self.process.stdout.readline)
-                if not line:
+                raw_line = await loop.run_in_executor(None, self.process.stdout.readline)
+                if not raw_line:
                     continue
-                clean = line.rstrip("\n")
+                line = self._decode_output(raw_line)
+                clean = line.rstrip("\r\n")
                 if clean:
                     match = task_pattern.search(clean)
                     if match:
@@ -182,8 +260,9 @@ class DashboardRunManager:
                     self._append_log("info", clean)
 
             if self.process and self.process.stdout:
-                remaining = await loop.run_in_executor(None, self.process.stdout.read)
-                if remaining:
+                remaining_raw = await loop.run_in_executor(None, self.process.stdout.read)
+                if remaining_raw:
+                    remaining = self._decode_output(remaining_raw)
                     for line in remaining.splitlines():
                         clean = line.strip()
                         if not clean:
@@ -200,12 +279,21 @@ class DashboardRunManager:
             self.ended_at = datetime.now()
             if self.process:
                 self.last_exit_code = self.process.returncode
-            if self.last_exit_code == 0:
+                if self.process.stdout:
+                    self.process.stdout.close()
+
+            if self._stop_requested:
+                self.status = "idle"
+                self._append_log("warning", f"Pipeline stopped by user. Exit code: {self.last_exit_code}")
+            elif self.last_exit_code == 0:
                 self.status = "idle"
                 self._append_log("success", "Pipeline finished successfully.")
             else:
                 self.status = "error"
                 self._append_log("warning", f"Pipeline finished with exit code: {self.last_exit_code}")
+
+            self.process = None
+            self._read_task = None
 
     async def scheduler_loop(self):
         self._append_log("info", "Dashboard daily scheduler loop started.")

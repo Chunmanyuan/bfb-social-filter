@@ -76,7 +76,7 @@ def run(task_id: str = None, item_ids: List[str] = None, num_frames: int = 40, d
     logger.info(f"Found {len(videos_to_process)} videos to process.")
     success_count = 0
     
-    for platform, item_id, local_media_paths in videos_to_process:
+    for platform, item_id, row_task_id, local_media_paths in videos_to_process:
         logger.info(f"Processing video item_id: {item_id} (Platform: {platform})")
         
         # 1. Parse local media paths 
@@ -109,7 +109,7 @@ def run(task_id: str = None, item_ids: List[str] = None, num_frames: int = 40, d
             )
             
             # 3. Save to database
-            if save_video_screenshots(platform, item_id, retained_frames):
+            if save_video_screenshots(platform, item_id, retained_frames, task_id=row_task_id):
                 logger.info(f"Successfully processed and saved {len(retained_frames)} screenshots for {item_id}.")
                 success_count += 1
             else:

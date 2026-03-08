@@ -340,6 +340,17 @@ async def run_once(payload: Optional[Dict[str, Any]] = None):
     return {"status": "ok", "message": "Pipeline run started"}
 
 
+@router.post("/run-stop")
+async def run_stop():
+    result = await run_manager.stop_once()
+    return {
+        "status": "ok" if result.get("stopped") else "idle",
+        "message": result.get("message", ""),
+        "run_status": run_manager.get_status(),
+    }
+
+
 @router.get("/run-status")
 async def run_status():
     return run_manager.get_status()
+

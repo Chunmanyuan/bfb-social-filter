@@ -3,12 +3,12 @@ chcp 65001 >nul 2>&1
 cd /d "%~dp0"
 
 echo ==================================================
-echo       展示检索服务 - 启动中 (DashboardQuerying)
+echo   第2步 - 启动展示检索服务
 echo ==================================================
+echo.
 
 if not exist "venv\" (
-    echo 错误：找不到 venv 虚拟环境！
-    echo 请先运行 "第1步_首次运行前安装系统所需依赖环境.bat"
+    echo 未检测到虚拟环境，请先运行【第0步_首次运行前安装系统所需依赖环境.bat】
     pause
     exit /b 1
 )
@@ -16,17 +16,17 @@ if not exist "venv\" (
 set PYTHON_BIN=venv\Scripts\python.exe
 set SERVICE_URL=http://127.0.0.1:8090/
 
-echo 正在启动 DashboardQuerying 服务...
-echo 启动后将自动打开浏览器访问: %SERVICE_URL%
+echo 正在启动展示检索服务...
+echo 浏览器将自动打开：%SERVICE_URL%
+echo.
+echo 如果尚未登录，请先运行【第1步_登录小红书和B站账号.bat】
 echo.
 
-REM 延迟几秒后打开浏览器
 start "" cmd /c "timeout /t 5 /nobreak >nul & start %SERVICE_URL%"
-
-REM 启动服务（前台运行，关闭窗口即停止服务）
 "%PYTHON_BIN%" DashboardQuerying\app.py
+chcp 65001 >nul 2>&1
 
 echo ==================================================
-echo 服务已停止。
+echo   服务已停止。
 echo ==================================================
 pause

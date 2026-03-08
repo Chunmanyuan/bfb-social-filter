@@ -1,45 +1,46 @@
 # 这是本项目全部模块（爬虫 + 截图 + OCR等）统一的依赖包清单
 # 请在项目根目录下，使用虚拟环境(venv)直接读取此文件安装，以杜绝跨机环境差异
+# Python 版本锁定：3.13.2
 
 # -----------------
 # 1. 爬虫模块依赖 (MediaCrawler)
 # -----------------
-httpx>=0.28.1
-Pillow>=12.1.0
-playwright>=1.45.0
-tenacity>=8.2.2
-typer>=0.12.3
-aiomysql>=0.2.0
-redis>=4.6.0
-pydantic>=2.5.2
-aiofiles>=23.2.1
-fastapi>=0.110.2
-uvicorn>=0.29.0
-python-dotenv>=1.0.1
-jieba>=0.42.1
-wordcloud>=1.9.3
-matplotlib>=3.9.0
-requests>=2.32.3
-parsel>=1.9.1
-pyexecjs>=1.5.1
-pandas>=2.2.3
-aiosqlite>=0.21.0
-pyhumps>=3.8.0
-cryptography>=45.0.7
-alembic>=1.16.5
-asyncmy>=0.2.10
-sqlalchemy>=2.0.43
-motor>=3.3.0
-openpyxl>=3.1.2
+httpx==0.28.1
+Pillow==12.1.1
+playwright==1.50.0
+tenacity==9.1.4
+typer==0.24.1
+aiomysql==0.3.2
+redis==7.2.1
+pydantic==2.12.5
+aiofiles==25.1.0
+fastapi==0.135.1
+uvicorn==0.41.0
+python-dotenv==1.2.2
+jieba==0.42.1
+wordcloud==1.9.6
+matplotlib==3.10.8
+requests==2.32.5
+parsel==1.11.0
+pyexecjs==1.5.1
+pandas==3.0.1
+aiosqlite==0.22.1
+pyhumps==3.8.0
+cryptography==46.0.5
+alembic==1.18.4
+asyncmy==0.2.11
+sqlalchemy==2.0.48
+motor==3.7.1
+openpyxl==3.1.5
 
 # -----------------
 # 2. 视频截图模块依赖 (VideoScreenshotter)
 # -----------------
-opencv-python>=4.12.0
-numpy>=1.26.0
+opencv-python==4.13.0.92
+numpy==2.4.2
 
 # -----------------
-# 3. 预留：OCR图像转文字模块依赖 (后期可继续往这里追加)
+# 3. OCR图像转文字模块依赖
 # -----------------
-paddlepaddle>=3.3.0
-paddleocr>=3.4.0
+paddlepaddle==3.3.0
+paddleocr==3.4.0
