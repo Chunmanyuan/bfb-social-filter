@@ -55,3 +55,6 @@ Launcher/__pycache__/
 
 # Misc generated files
 *.bak
+
+# Internal docs not intended for public repository
+架构和接口说明/
